@@ -1,75 +1,79 @@
 import React, { Fragment, useState, useEffect } from 'react'
-import {
-  Card,
-  CardContent,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
-  Typography,
-} from '@mui/material'
+import { Card, CardContent, List, ListItem, ListItemText, ListItemIcon, Typography } from '@mui/material'
 import ReceiptIcon from '@mui/icons-material/Receipt'
+import InfoIcon from '@mui/icons-material/Info'
 import { TodoListForm } from './TodoListForm'
-
-// Simulate network
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-const fetchTodoLists = () => {
-  return sleep(1000).then(() =>
-    Promise.resolve({
-      '0000000001': {
-        id: '0000000001',
-        title: 'First List',
-        todos: ['First todo of first list!'],
-      },
-      '0000000002': {
-        id: '0000000002',
-        title: 'Second List',
-        todos: ['First todo of second list!'],
-      },
-    })
-  )
-}
+import { fetchData } from './RequestFunctions'
 
 export const TodoLists = ({ style }) => {
-  const [todoLists, setTodoLists] = useState({})
-  const [activeList, setActiveList] = useState()
+  const [todoLists, setTodoLists] = useState(null);
+  const [activeList, setActiveList] = useState();
+  const [message, setMessage] = useState(null);
+
+  const displayMessage = (message) => {
+    setMessage(message);
+    setTimeout(() => {
+      setMessage(null);
+    }, 2500);
+  }
 
   useEffect(() => {
-    fetchTodoLists().then(setTodoLists)
+    fetchData()
+      .then((res) => {
+        setTodoLists(res);
+        displayMessage("Lists successfully fetched from server");
+      })
+      .catch((e) => {
+        console.log(e.message);
+      })
   }, [])
 
-  if (!Object.keys(todoLists).length) return null
   return (
-    <Fragment>
-      <Card style={style}>
-        <CardContent>
-          <Typography component='h2'>My Todo Lists</Typography>
-          <List>
-            {Object.keys(todoLists).map((key) => (
-              <ListItem key={key} button onClick={() => setActiveList(key)}>
-                <ListItemIcon>
-                  <ReceiptIcon />
-                </ListItemIcon>
-                <ListItemText primary={todoLists[key].title} />
-              </ListItem>
-            ))}
-          </List>
-        </CardContent>
-      </Card>
-      {todoLists[activeList] && (
-        <TodoListForm
-          key={activeList} // use key to make React recreate component to reset internal state
-          todoList={todoLists[activeList]}
-          saveTodoList={(id, { todos }) => {
-            const listToUpdate = todoLists[id]
-            setTodoLists({
-              ...todoLists,
-              [id]: { ...listToUpdate, todos },
-            })
-          }}
-        />
-      )}
-    </Fragment>
+    <>
+      {
+        todoLists == null ?
+          (
+            <Fragment>
+              <Card style={style}>
+                <Typography component='h2'>Loading todo-lists</Typography>
+              </Card>
+            </Fragment>
+          )
+          :
+          (
+            <Fragment>
+              <Card style={style}>
+                <CardContent>
+                  <Typography component='h2'>My Todo Lists {message && <span style={{float:"right"}}><InfoIcon style={{position:"relative",top:"5px"}} /> {message}</span>} </Typography>
+                  <List>
+                    {Object.keys(todoLists).map((key) => (
+                      <ListItem key={key} button onClick={() => setActiveList(key)}>
+                        <ListItemIcon>
+                          <ReceiptIcon />
+                        </ListItemIcon>
+                        <ListItemText primary={todoLists[key].title} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </CardContent>
+              </Card>
+              {todoLists[activeList] && (
+                <TodoListForm
+                  key={activeList} // use key to make React recreate component to reset internal state
+                  todoList={todoLists[activeList]}
+                  displayMessage={displayMessage}
+                  saveTodoList={(id, { todos }) => {
+                    const listToUpdate = todoLists[id];
+                    setTodoLists({
+                      ...todoLists,
+                      [id]: { ...listToUpdate, todos }
+                    })
+                  }}
+                />
+              )}
+            </Fragment>
+          )
+      }
+    </>
   )
 }

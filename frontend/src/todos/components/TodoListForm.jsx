@@ -1,14 +1,24 @@
 import React, { useState } from 'react'
-import { TextField, Card, CardContent, CardActions, Button, Typography } from '@mui/material'
+import { TextField, Card, CardContent, CardActions, Button, Typography, Checkbox } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
+import { saveData } from './RequestFunctions'
 
-export const TodoListForm = ({ todoList, saveTodoList }) => {
-  const [todos, setTodos] = useState(todoList.todos)
+export const TodoListForm = ({ todoList, saveTodoList, displayMessage }) => {
+  const [todos, setTodos] = useState(todoList.todos);
 
   const handleSubmit = (event) => {
-    event.preventDefault()
-    saveTodoList(todoList.id, { todos })
+    if (event != null) {
+      event.preventDefault();
+    }
+    saveTodoList(todoList.id, { todos });
+    saveData(todoList.id, todos)
+      .then((res) => {
+        displayMessage("Lists successfully saved on server.");
+      })
+      .catch((e) => {
+        console.log(e.message)
+      })
   }
 
   return (
@@ -19,20 +29,31 @@ export const TodoListForm = ({ todoList, saveTodoList }) => {
           onSubmit={handleSubmit}
           style={{ display: 'flex', flexDirection: 'column', flexGrow: 1 }}
         >
-          {todos.map((name, index) => (
+          {todos.map((obj, index) => (
             <div key={index} style={{ display: 'flex', alignItems: 'center' }}>
               <Typography sx={{ margin: '8px' }} variant='h6'>
                 {index + 1}
               </Typography>
+              <Checkbox
+                checked={obj.completed || false}
+                onChange={(event) => {
+                  setTodos([
+                    ...todos.slice(0, index),
+                    { "name": todos[index].name, "completed": event.target.checked },
+                    ...todos.slice(index + 1),
+                  ]);
+                  handleSubmit();
+                }}
+              />
               <TextField
                 sx={{ flexGrow: 1, marginTop: '1rem' }}
                 label='What to do?'
-                value={name}
+                value={obj.name}
+                onBlur={handleSubmit}
                 onChange={(event) => {
                   setTodos([
-                    // immutable update
                     ...todos.slice(0, index),
-                    event.target.value,
+                    { "name": event.target.value, "completed": todos[index].completed },
                     ...todos.slice(index + 1),
                   ])
                 }}
